@@ -67,7 +67,7 @@ li:not(li:hover) i {
 }
 li img,
 li i {
-    transition: .35s all;
+    transition: .35s all !important;
 }
 li:hover img,
 li:hover i {

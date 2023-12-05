@@ -18,19 +18,11 @@
                     <tr class="h-[10px] pointer-events-none"></tr>
                     <tr v-for="(item, index) in items" :key="index" @click="item.selected = !item.selected">
                         <td v-if="columns.type" class="type-icon flex justify-center">
-                            <img
-                                :src="
-                                    [5,1].includes(item.type)
-                                        ? '/media/img/resource_logo/no-image.png'
-                                        : `/media/img/resource_logo/smi/${item.type}.${item.type == 2 ? 'png' : 'svg'}`
-                                "
-                                style="width: 24px;"
-                                v-if="r_type == 1"
-                            />
+                            <i class="fa fa-newspaper-o" v-if="item.r_type == 1"></i>
                             <img
                                 :src="`/media/img/resource_logo/${item.type}.png`"
                                 style="width: 24px;"
-                                v-else-if="r_type == 2"
+                                v-else-if="item.r_type == 2"
                             />
                         </td>
                         <td
@@ -79,10 +71,6 @@
 
 export default {
     props: {
-        r_type: {
-            type: Number,
-            required: true
-        },
         items: {
             type: Array,
             required: true
