@@ -14,11 +14,18 @@
                         <th v-if="columns.status">Статус</th>
                     </tr>
                 </thead>
-                <tbody class="scrollbar max-h-[500px]">
+                <TransitionGroup name="list" tag="tbody" class="scrollbar max-h-[500px] select-none">
                     <tr class="h-[10px] pointer-events-none"></tr>
-                    <tr v-for="(item, index) in items" :key="index" @click="item.selected = !item.selected">
+                    <tr
+                        v-for="(item, index) in items"
+                        :key="item.link"
+                        @click="$emit('select-item', $event, index)"
+                        :class="{
+                            relative: selectable || copy_link
+                        }"
+                    >
                         <td v-if="columns.type" class="type-icon flex justify-center">
-                            <i class="fa fa-newspaper-o" v-if="item.r_type == 1"></i>
+                            <i class="fa fa-newspaper-o text-[19px] pt-[3px]" v-if="item.r_type == 1"></i>
                             <img
                                 :src="`/media/img/resource_logo/${item.type}.png`"
                                 style="width: 24px;"
@@ -31,35 +38,46 @@
                                 'relative !pr-[40px]': copy_link
                             }"
                         >
-                            <input v-if="inputProject" type="checkbox" class="!mr-[10px]" v-model="item.selected" />
+                            <input
+                                v-if="selectable"
+                                type="checkbox"
+                                class="!mr-[10px] !mt-[-3px] align-middle"
+                                v-model="item.selected"
+                            />
                             <!-- text-[#4e94d0] text-[#529ddd] -->
                             <a
                                 class="truncate"
                                 :class="{
-                                    'transition-all hover:underline hover:text-[#337ab7]': !inputProject
+                                    'transition-all hover:underline hover:text-[#337ab7]': !selectable
                                 }"
                                 target="_blank"
-                                :href="inputProject ? undefined : item.link"
+                                :href="selectable ? undefined : item.link"
                                 :title="item.link"
                             >{{ item.link }}</a>
-                            <i v-if="copy_link" class="fa fa-copy absolute right-[16px] cursor-pointer" @click="copyLink(item.link)"></i>
+                            <i
+                                v-if="copy_link"
+                                class="fa fa-copy absolute right-[16px] cursor-pointer"
+                                @click="copyLink(item.link)"
+                            ></i>
                         </td>
                         <td v-if="columns.parsing">{{ item.parsing ? 'Да' : 'Нет' }}</td>
                         <td v-if="columns.created_at">{{ item.created_at }}</td>
-                        <td v-if="inputProject">
-                            <input
-                                type="text"
-                                class="w-[100px] rounded-[4px] p-[3px] text-center focus:outline-none"
-                                style="box-shadow: 0 0 7px rgb(0 0 0 / 20%);"
-                                v-model="item.project_id"
-                                @click.stop
-                            />
-                        </td>
-                        <td v-else-if="columns.project_id">{{ item.project_id }}</td>
-                        <td v-if="columns.status">{{ item.status }}</td>
+                        <td
+                            v-if="columns.project_id"
+                            :title="item.project_id"
+                            class="truncate max-w-[110px]"
+                        >{{ (item?.project_id?.join(', ') ?? 'Не указан') }}</td>
+                        <td v-if="columns.status" class="whitespace-nowrap">{{ item.status ?? 'Не найден' }}</td>
+                        <i
+                            v-if="selectable || copy_link"
+                            class="fa-solid fa-xmark
+                                absolute top-[-5px] right-[-5px] transition-all
+                                bg-[#ec5e5e] text-white text-[14px] cursor-pointer pt-[2px]
+                                flex w-[1.35em] h-[1.35em] items-center justify-center rounded-full"
+                            @click.stop="$emit('remove-item', index)"></i>
                     </tr>
                     <tr class="h-[10px] pointer-events-none"></tr>
-                </tbody>
+                </TransitionGroup>
             </table>
         </div>
         <div class="absolute top-[15px] right-[20px] left-[20px]" style="box-shadow: white 0px 0px 8px 8px;"></div>
@@ -94,7 +112,7 @@ export default {
             required: false,
             default: false
         },
-        inputProject: {
+        selectable: {
             type: Boolean,
             required: false,
             default: false
@@ -121,10 +139,11 @@ export default {
             }
         }
 
-        if (Object.keys(this.only).length) columns = this.only;
+        if (this.only.length) columns = this.only.reduce((d,key) => ({...d, [key]: true}), {});
 
         return {
-            columns: columns
+            columns: columns,
+            lastSelectedIndex: undefined,
         }
     },
     methods: {
@@ -139,6 +158,39 @@ export default {
             tmp.select();
             document.execCommand("copy");
             document.body.removeChild(tmp);
+        },
+        sortBy() {
+            // let counter = 0;
+
+            // '0123456789'.split('').reverse().sort((a, b) => {
+            //     console.log(++counter)
+            //     return a - b
+            // })
+
+            let counter = 0;
+
+            let arr = '0123456789'.split('').map(n => ({i:+n, hide: false}));
+
+            console.log('default arr is', arr.map(obj => obj.i))
+
+            function sortBy(field) {
+                return function(a, b) {
+
+                    console.log(++counter)
+
+                    a.hide = ((a[field] % 2) == 0);
+                    b.hide = ((b[field] % 2) == 0);
+
+                    if (a[field] > b[field]) {
+                    return -1;
+                    } else if (a[field] < b[field]) {
+                    return 1;
+                    }
+                    return 0;
+                };
+            }
+
+            arr.sort(sortBy('i'))
         },
     }
 }
@@ -158,6 +210,10 @@ th {
 td {
     height: 38px;
     font-size: 13px;
+}
+tr:not(:hover) .fa-xmark {
+    opacity: .2;
+    transform: scale(.7);
 }
 thead {
     box-shadow: 0px 2px 6px 0px #b4b3b3;
@@ -200,9 +256,11 @@ tbody tr:hover td {
     max-width: clamp(200px, 200px, 930px);
 }
 
+.type-icon i,
 .type-icon img {
-    transition: .35s all;
+    transition: .35s all !important;
 }
+.type-icon:hover i,
 .type-icon:hover img {
     transform: scale(1.4);
 }
