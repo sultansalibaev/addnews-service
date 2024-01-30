@@ -1,8 +1,8 @@
 <template>
     <span
         role="textbox"
-        :ref="ref"
-        :contenteditable="contenteditable ?? 'plaintext-only'"
+        ref="textbox"
+        :contenteditable="contenteditable"
         :placeholder="placeholder"
         class="
             chatgpt-textbox-scrollbar gray-scrollbar m-0 w-full resize-none border-0 bg-white text-black
@@ -14,18 +14,13 @@
 
 export default {
     props: {
-        ref: {
-            type: String,
-            required: false,
-            default: ''
-        },
         placeholder: {
             type: String,
             required: false,
             default: ''
         },
         contenteditable: {
-            type: Boolean,
+            type: String,
             required: false,
             default: undefined
         },

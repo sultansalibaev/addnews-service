@@ -41,3 +41,6 @@ String.prototype.maxLength = function (length) {
 String.prototype.lowerIncludes = function (string) {
     return this.trim().toLowerCase().includes(string.trim().toLowerCase())
 }
+String.prototype.indexOfLowerCase = function (string) {
+    return this.trim().toLowerCase().indexOf(string.trim().toLowerCase())
+}

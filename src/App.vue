@@ -1,12 +1,15 @@
 <template>
     <div class="p-[15px]" @click="project_list_modal = false">
         <div class="input-group h-full mb-[15px] flex items-end">
-            <!-- <input class="form-control" type="url" placeholder="Введите URL-адрес новости (http://www.example.com)"> -->
-            <div class="relative w-full h-[33.63px] z-10" id="chatgpt-prompt-textarea">
+            <div class="relative w-full h-[33.63px] z-10 rounded-tl-[4px] rounded-bl-[4px]" id="chatgpt-prompt-textarea">
                 <ResizableField
-                    :ref="'urlsInput'"
+                    ref="urlsInput"
+                    :contenteditable="'plaintext-only'"
                     :placeholder="'Введите ссылку на публикацию'"
-                    class="max-h-[200px] min-h-[24px] [&:not(:focus)]:!max-h-[39.86px]"
+                    class="max-h-[200px] min-h-[24px] [&:not(:focus)]:!max-h-[39.86px] whitespace-pre-line"
+                    @input="inputUrlsInput"
+                    @focusout="updateHtml"
+                    v-html="urlsInput"
                 ></ResizableField>
             </div>
             <span class="input-group-btn mob-p-x-0" style="width: unset;">
@@ -15,98 +18,52 @@
         </div>
         <div class="tabs-container">
             <ul class="nav nav-tabs" role="tablist">
-                <li class="active">
-                    <a class="nav-link active" data-toggle="tab" href="#tab-1" aria-expanded="true">
+                <li v-if="urls.to_system.length" :class="{ active: selected_tab == 1 }" @click="selected_tab = 1">
+                    <a class="nav-link" data-toggle="tab" href="#tab-1" :aria-expanded="selected_tab == 1">
                         <i class="fa-solid fa-info"></i>
                         Инфо
                     </a>
                 </li>
-                <li v-if="own_requests.length">
-                    <a class="nav-link" data-toggle="tab" href="#tab-2">
-                        <img class="inline-block !max-w-[16px] mr-[4px]" src="./assets/svg/parsing.svg" alt="parsing icon">
-                        Парсинг
+                <li v-if="own_requests.length" :class="{ active: selected_tab == 2 }" @click="selected_tab = 2">
+                    <a class="nav-link" data-toggle="tab" href="#tab-2" :aria-expanded="selected_tab == 2">
+                        <i class="fa-solid fa-plus"></i>
+                        <!-- <img class="inline-block !max-w-[16px] mr-[4px]" src="./assets/svg/parsing.svg" alt="parsing icon"> -->
+                        Добавление
                     </a>
                 </li>
-                <li v-if="items_manually.length">
-                    <a class="nav-link" data-toggle="tab" href="#tab-3">
+                <li v-if="items_manually.length" :class="{ active: selected_tab == 3 }" @click="selected_tab = 3">
+                    <a class="nav-link" data-toggle="tab" href="#tab-3" :aria-expanded="selected_tab == 3">
                         <img class="inline-block !max-w-[16px] mr-[4px]" src="./assets/svg/add-manually.svg" alt="add-manually icon">
                         Вручную
                     </a>
                 </li>
-                <li v-if="urls.invalid.length" class="!float-right">
-                    <a class="nav-link" data-toggle="tab" href="#tab-4">
+                <li v-if="urls.unknown_source.length" :class="{ active: selected_tab == 4 }" @click="selected_tab = 4">
+                    <a class="nav-link" data-toggle="tab" href="#tab-4" :aria-expanded="selected_tab == 4">
+                        Источник
+                    </a>
+                </li>
+                <li v-if="urls.to_projects.length" :class="{ active: selected_tab == 5 }" @click="selected_tab = 5">
+                    <a class="nav-link" data-toggle="tab" href="#tab-5" :aria-expanded="selected_tab == 5">
+                        <i class="fa fa-desktop"></i>
+                        Проект
+                    </a>
+                </li>
+                <li v-if="urls.invalid.length" class="!float-right" :class="{ active: selected_tab == 6 }" @click="selected_tab = 6">
+                    <a class="nav-link" data-toggle="tab" href="#tab-6" :aria-expanded="selected_tab == 6">
                         <i class="fa-solid fa-triangle-exclamation text-[#f2b90a] !scale-[1.4]"></i>
                     </a>
                 </li>
             </ul>
             <div class="tab-content bg-white pb-[15px]">
-                <div role="tabpanel" id="tab-1" class="tab-pane active" v-show="urls.valid.length">
-                    <div class="flex justify-between items-center mt-[18px] px-[15px] mx-[5px] h-[33.63px]">
-                        <h3 class="!text-[20px]">Добавить новые публикации:</h3>
-                        <div
-                            v-show="selectedUrls.some(item => !item?.project_id?.length)"
-                            class="flex flex-grow-[1] items-center justify-end gap-[12px]"
-                        >
-                            <div
-                                class="relative h-[33.19px] z-[9] max-w-[270px] w-full projects-container"
-                                @click.stop="project_list_modal = true"
-                            >
-                                <ResizableField
-                                    :ref="'projects'"
-                                    :contenteditable="true"
-                                    :placeholder="'Введите название либо ID-проекта'"
-                                    @input="inputProject"
-                                    class="h-[100px] projects"
-                                    :class="{
-                                        '!h-[33.19px]': !project_list_modal,
-                                    }"
-                                >
-                                    <!-- [&:not(:empty)]:!pt-0 -->
-                                    <TransitionGroup name="tags" tag="span" contenteditable="false" class="tags select-none">
-                                        <span v-for="(p_id, index) in selected_project_ids" :key="p_id" class="inline-block">
-                                            <span
-                                                class="project-tag bg-gray-400 text-white rounded-[5px] px-[5px] inline-flex h-[18px] mb-px items-center relative z-[8]"
-                                            >{{p_id}}<i
-                                                class="
-                                                    fa-solid fa-xmark scale-[.7] absolute top-[-8px] right-[-8px]
-                                                    transition-all bg-[#ec5e5e] text-white text-[14px] cursor-pointer pt-[2px]
-                                                    flex w-[1.35em] h-[1.35em] items-center justify-center rounded-full
-                                                "
-                                                @click="removeSelectedProject(index)"
-                                            ></i></span>
-                                            <span class="font-bold text-[18px]">,</span>&nbsp;
-                                        </span>
-                                    </TransitionGroup>
-                                </ResizableField>
-                                <div
-                                    id="project-list"
-                                    class="absolute top-[100px] h-[200px] ring-0 chatgpt-textbox-scrollbar gray-scrollbar"
-                                    :class="{
-                                        'hidden': !project_list_modal,
-                                    }"
-                                    @scroll="onScroll"
-                                >
-                                    <div
-                                        v-for="project in temp_project_ids"
-                                        :key="project.id"
-                                        class="project-id-name"
-                                        @click.stop="addProject(project.name);project_list_modal = false"
-                                    ><b v-if="isNumber(inputProject)">{{ project.id }}:&nbsp;</b>{{ project.name }}</div>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                class="btn btn-default"
-                                @click="input_project = ''"
-                            >Отмена</button>
-                            <button
-                                type="button"
-                                class="btn btn-primary"
-                                @click="input_project = ''"
-                            >Применить</button>
-                        </div>
-                    </div>
-                    <NewsTable @select-item="selectItem" @remove-item="removeItem" :items="urls.valid" :selectable="true" :only="['link', 'project_id', 'status']" />
+                <div role="tabpanel" id="tab-1" class="tab-pane" :class="{ active: selected_tab == 1 }">
+                    <NewsTable
+                        @select-item="selectItem"
+                        @remove-item="removeItem"
+                        :items="urls.to_system"
+                        :tab-name="'to_system'"
+                        :selectable="true"
+                        :set-columns="{ published_at: false, published_at: false }"
+                    />
                     <div class="flex items-center gap-x-[12px] px-[15px] mx-[5px]">
                         <button
                             type="button"
@@ -122,19 +79,65 @@
                                 '!bg-gray-300 !border-gray-300 pointer-events-none': !selectedUrls.length,
                             }"
                             class="btn btn-primary"
-                        >Поставить на парсинг</button>
+                            @click="add_items"
+                        >Добавить в систему</button>
                     </div>
                 </div>
-                <div role="tabpanel" id="tab-1" class="tab-pane active" v-show="!urls.valid.length">
-                    <div>Вы не добавили ссылок</div>
+                <div role="tabpanel" id="tab-2" class="tab-pane"  :class="{ active: selected_tab == 2 }">
+                    <NewsTable :items="own_requests" :setColumns="{ source: false }" />
                 </div>
-                <div role="tabpanel" id="tab-2" class="tab-pane">
-                    <NewsTable :items="own_requests" />
-                </div>
-                <div role="tabpanel" id="tab-3" class="tab-pane" v-if="items_manually.length">
+                <div role="tabpanel" id="tab-3" class="tab-pane"  :class="{ active: selected_tab == 3 }" v-if="items_manually.length">
                     <NewsTable class="invalid-table" @remove-item="removeManuallyItem" :items="items_manually" :only="['link', 'project_id']" />
                 </div>
-                <div role="tabpanel" id="tab-4" class="tab-pane" v-if="urls.invalid.length">
+                <div role="tabpanel" id="tab-4" class="tab-pane"  :class="{ active: selected_tab == 4 }" v-if="urls.unknown_source.length">
+                    <NewsTable
+                        @select-item="selectItem"
+                        @remove-item="removeItem"
+                        :items="urls.unknown_source"
+                        :tab-name="'unknown_source'"
+                        :set-columns="{ project_id: false, status: false }"
+                        :selectable="true"
+                    />
+                </div>
+                <div role="tabpanel" id="tab-5" class="tab-pane"  :class="{ active: selected_tab == 5 }" v-if="urls.to_projects.length">
+                    <div class="flex justify-between items-center mt-[18px] px-[15px] mx-[5px] h-[33.63px]">
+                        <h3 class="!text-[20px]">Добавление новых публикации:</h3>
+                        <div
+                            v-if="selectedUrls.length"
+                            class="flex flex-grow-[1] items-center justify-end gap-[12px]"
+                        >
+                            <select-tags />
+                            <button
+                                type="button"
+                                class="btn btn-default"
+                                @click="cancelProjects()"
+                            >Отмена</button>
+                            <button
+                                type="button"
+                                class="btn btn-primary"
+                                @click="applyProjects()"
+                            >Применить</button>
+                        </div>
+                    </div>
+                    <NewsTable
+                        @select-item="selectItem"
+                        @remove-item="removeItem"
+                        :items="urls.to_projects"
+                        :tab-name="'to_projects'"
+                        :set-columns="{ status: false }"
+                        :selectable="true"
+                    />
+                    <div class="flex items-center gap-x-[12px] px-[15px] mx-[5px]">
+                        <button
+                            type="button"
+                            :class="{
+                                '!bg-gray-300 !border-gray-300 pointer-events-none': !selectedUrls.length,
+                            }"
+                            class="btn btn-primary ml-auto"
+                        >Добавить</button>
+                    </div>
+                </div>
+                <div role="tabpanel" id="tab-6" class="tab-pane"  :class="{ active: selected_tab == 6 }" v-if="urls.invalid.length">
                     <NewsTable class="invalid-table" :withoutThead="true" :copy_link="true" :items="urls.invalid" :only="['link']" />
                 </div>
             </div>
@@ -145,184 +148,118 @@
 <script>
 import NewsTable from './components/NewsTable.vue';
 import ResizableField from './components/ui/ResizableField.vue';
-import axios from 'axios'
 import '@/use/utils'
+import { getInfoItems, getItems, addToProjects } from './use/api';
+
+import SelectTags from "@/components/ui/SelectTags.vue"
+import { initProjects } from "@/use/api/projects"
+import { clearSelectedTags, selected_tags } from "@/use/data/tags"
 
 export default {
     name: 'App',
     components: {
         NewsTable,
         ResizableField,
+        SelectTags,
     },
+    setup: () => ({
+        getInfoItems,
+        getItems,
+
+        initProjects,
+        addToProjects,
+
+        clearSelectedTags,
+        selected_tags,
+    }),
     data() {
-        function randomInt(min, max) { // min and max included 
+        function randomInt(min, max) {
             return Math.floor(Math.random() * (max - min + 1) + min)
         }
         function randomProjects() {
             return Array(randomInt(1,3)).fill(''+randomInt(10116,10189))
+                        .map(p_id => ({
+                            id: p_id,
+                            name: 'Project name ...'
+                        }))
         }
         let own_requests = this.shuffle([...(
             Array(25).fill(1).map((n,i) => ({
-                type: this.getEvery(i+1, 13),
-                r_type: 1,
+                category_id: this.getEvery(i+1, 13),
+                type: 1,
                 link: 'https://www.ami.com/@turarym/video/7210744343785688326',
                 parsing: false,
-                created_at: '2023-03-29 09:51:34',
-                project_id: randomProjects(),
+                published_at: '2023-03-29 09:51:34',
+                projects: randomProjects(),
                 status: 'Выполнен'
             }))
         ), ...(
             Array(25).fill(1).map((n,i) => ({
-                type: this.getEvery(i+1, 10),
-                r_type: 2,
+                category_id: this.getEvery(i+1, 10),
+                type: 2,
                 link: 'https://www.tiktok.com/@turarym/video/7210744343785688326',
                 parsing: false,
-                created_at: '2023-03-29 09:51:34',
-                project_id: randomProjects(),
+                published_at: '2023-03-29 09:51:34',
+                projects: randomProjects(),
                 status: 'Выполнен'
             }))
         )]);
 
+        let social_category_ids = {
+            'vk.com': 1,
+            'facebook': 2,
+            'twitter.com': 3,
+            'instagram.com': 4,
+            'youtube.com': 6,
+            'ok.ru': 7,
+            't.me': 9,
+            'tiktok.com': 10,
+        };
+
         return {
+            selected_tab: 2,
             urls: {
                 invalid: [],
-                valid: [],
+                to_system: [],
+                unknown_source: [],
+                to_projects: [],
             },
-            social_hosts: ['facebook','vk.com','twitter.com','instagram.com','youtube.com','ok.ru','t.me','tiktok.com'],
+            social_hosts: Object.keys(social_category_ids),
+            social_category_ids: social_category_ids,
             own_requests,
             items_manually: [],
-            selectProjects: false,
-            project_ids: [],
-            sorted_project_ids: [],
-            temp_project_ids: [],
-            project_list_modal: false,
-            selected_project_ids: [6816,6871,45348,2964,578694],
-            input_project: '',
-            toUndo: {
-                historyRedo: true,
-                deleteWordBackward: true,
-                deleteWordForward: true,
-                deleteContentBackward: true,
-                deleteContentForward: true
-            },
-            typingTimer: 0,
-            doneTypingInterval: 1000,
         }
     },
     methods: {
-        addProject(project) {
-            console.log('project', project);
-            this.input_project = '';
-            this.selected_project_ids.push(project);
+        handlerAddToProjects() {
+            this.addToProjects(this.urls.to_projects)
+                .then(response => {
+                    console.log('handlerAddToProjects', response);
+                })
         },
-        isInteger(value) {
-            return /^\d+$/.test(value);
-        },
-        isNumber(value) {
-            return !Number.isNaN(Number(value));
-        },
-        inputInteger(event) {
-            // this.isInteger(event.data)
-            if (event.data === null && event.inputType === 'deleteContentBackward') {
-                this.input_project = this.input_project.slice(0, -1);
-            }
-            else if (event.inputType === 'insertText') {
-                this.input_project += event.data;
-            }
-        },
-        removeSelectedProject(index) {
-            this.selected_project_ids.splice(index, 1);
-            if (this.selected_project_ids.length === 0) {
-                let projects = this.$refs.projects;
-                projects.innerHTML = this.input_project;
-            }
-        },
-        inputProject(event) {
-            if (
-                this.input_project === '' &&
-                event.type === "input" &&
-                this.toUndo[event.inputType]
-            ) {
-                document.execCommand('undo', false, null);
-                return;
-            }
-            let project = this.$refs.projects.textContent.trim();
-            this.selected_project_ids.forEach(p_id => {
-                project = project.replace(`${p_id},`, '');
+        cancelProjects() {
+            // this.input_project = '';
+            this.urls.to_projects.forEach(item => {
+                if (!item.selected) return;
+                item.selected = false;
             });
-
-            project = project.trim();
-            if (project.at(0) === ',') project = project.slice(1).trim();
-
-            let old_input_project = this.input_project;
-            this.input_project = project;
-
-            clearTimeout(this.typingTimer);
-			this.typingTimer = setTimeout(() => {
-                this.sort_project_ids(old_input_project)
-            }, this.doneTypingInterval);
+            this.clearSelectedTags();
         },
-        sort_project_ids(old_input_project) {
+        applyProjects() {
+            // this.input_project = '';
+            this.urls.to_projects.forEach(item => {
+                if (!item.selected) return;
 
-            if (this.input_project == old_input_project) return;
-
-            if (this.input_project == '') {
-                this.sorted_project_ids = this.project_ids.slice();
-                this.update_temp_project_ids();
-                return;
-            }
-
-            let temp_sorted_projects;
-
-            if (this.input_project.startsWith(old_input_project)) {
-                temp_sorted_projects = this.sorted_project_ids.slice();
-            }
-            else {
-                temp_sorted_projects = this.project_ids.slice();
-            }
-
-            let param = 'id';
-            if (Number.isNaN(Number(this.input_project))) param = 'name';
-
-            this.sorted_project_ids = temp_sorted_projects
-                .filter(item => (item?.[param] || '').lowerIncludes(this.input_project))
-                .sort((a,b) => {
-                    const a_index = a?.[param]?.indexOf(this.input_project);
-                    const b_index = b?.[param]?.indexOf(this.input_project);
-                    return a_index < b_index ? -1 : 0
-                });
-            this.update_temp_project_ids();
+                item.selected = false;
+                item.projects = JSON.parse(JSON.stringify(this.selected_tags));
+                console.log(item.link, item);
+                console.log('selected_tags', this.selected_tags);
+                console.log('item.projects', item.projects);
+            });
+            this.clearSelectedTags();
         },
-        update_temp_project_ids() {
-            this.temp_project_ids = this.sorted_project_ids.slice(0, 50)
-        },
-        isInViewport(el) {
-            const rect = el.getBoundingClientRect();
-
-            var isinview = (
-                rect.top >= 0 &&
-                rect.left >= 0 &&
-                rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-
-            );
-
-            return isinview;
-        },
-        onScroll({ target: { scrollTop, clientHeight, scrollHeight }}) {
-            if (scrollTop + clientHeight >= scrollHeight-32) {
-                this.get_more_temp_project_ids()
-            }
-        },
-        get_more_temp_project_ids() {
-            let temp_projects_length = this.temp_project_ids.length;
-            console.log('before', this.temp_project_ids);
-            this.temp_project_ids.push(...this.sorted_project_ids.slice(temp_projects_length, temp_projects_length + 50))
-            console.log('after', this.temp_project_ids, this.sorted_project_ids.slice(temp_projects_length, temp_projects_length + 50));
-            console.log('lengths', this.temp_project_ids.length, this.sorted_project_ids.length);
-        },
-        selectItem(event, index) {
-            if (!event.shiftKey) this.urls.valid[index].selected = !this.urls.valid[index].selected;
+        selectItem(event, index, tab_name) {
+            if (!event.shiftKey && this.urls[tab_name]) this.urls[tab_name][index].selected = !this.urls?.[tab_name][index].selected;
 
             let start = this.lastSelectedIndex, end = index;
 
@@ -331,18 +268,18 @@ export default {
                 end = this.lastSelectedIndex;
             }
 
-            const bool = this.urls.valid.slice(start, end+1).some(temp => !temp.selected);
+            const bool = this.urls?.[tab_name].slice(start, end+1).some(temp => !temp.selected);
 
             if (this.lastSelectedIndex != undefined && event.shiftKey) {
                 for (let i = start; i <= end; i++) {
-                    this.urls.valid[i].selected = bool;
+                    if (this.urls[tab_name]) this.urls[tab_name][i].selected = bool;
                 }
             }
 
             if (!event.shiftKey) this.lastSelectedIndex = index;
         },
-        removeItem(itemIndex) {
-            if (itemIndex > -1) this.urls.valid.splice(itemIndex, 1)
+        removeItem(itemIndex, tab_name) {
+            if (itemIndex > -1) this.urls?.[tab_name].splice(itemIndex, 1)
         },
         removeManuallyItem(itemIndex) {
             if (itemIndex > -1) this.items_manually.splice(itemIndex, 1)
@@ -361,18 +298,28 @@ export default {
             return array;
         },
         add_items_manually() {
-            this.urls.valid.filter(item => item.selected).forEach(item => {
+            this.urls.to_system.filter(item => item.selected).forEach(item => {
                 if (this.all_items_manually_obj[item.link]) return;
                 this.items_manually.unshift(item);
             })
-            this.urls.valid = this.urls.valid.filter(item => !item.selected)
+            this.urls.to_system = this.urls.to_system.filter(item => !item.selected)
+        },
+        add_items() {
+            this.urls.to_system.filter(item => item.selected).forEach(item => {
+                if (this.all_items_manually_obj[item.link]) return;
+                this.items_manually.unshift(item);
+            })
+            this.urls.to_system = this.urls.to_system.filter(item => !item.selected)
         },
         getEvery(num, every) {
             return num > every ? num - (every * parseInt(num / every)) || every : num
         },
+        inputUrlsInput({ target: { textContent } }) {
+            this.urlsInput = textContent;
+        },
         add_urls() {
-            let urlsInput = this.$refs.urlsInput;
-            urlsInput.textContent.trim().split('\n').forEach(url => {
+            let temp_valid_urls = [];
+            this.urlsInput.trim().split('\n').forEach(url => {
 
                 url = url.trim();
 
@@ -384,14 +331,50 @@ export default {
                     this.urls.invalid.unshift({ link: url })
                 }
                 else if (this.social_hosts.some(host => hostname.includes(host))) {
-                    this.urls.valid.unshift({ link: url, r_type: 2 })
+                    temp_valid_urls.unshift({ link: url, type: 2 })
                 }
                 else {
-                    this.urls.valid.unshift({ link: url, r_type: 1 })
+                    temp_valid_urls.unshift({ link: url, type: 1 })
                 }
             });
-            
-            urlsInput.innerHTML = '';
+
+            this.$refs.urlsInput.$refs.textbox.innerHTML = this.urlsInput = '';
+
+            if (temp_valid_urls.length) {
+                this.getInfoItems(temp_valid_urls.map(item => item.link))
+                    .then(response => {
+                        console.log('getInfoItems', response);
+                        let temp_items = response.data.map(item => {
+                            let hostname = this.validHttpUrl(item.link).hostname;
+                            let social_host = this.social_hosts.find(host => hostname.includes(host));
+                            if (social_host != undefined) {
+                                item.type = 2;
+                                item.category_id = this.social_category_ids?.[social_host];
+                            }
+                            if (item.published_at) {
+                                item.published_at = new Date(item.published_at).format("Y-m-d h:i:s");
+                            }
+
+                            return item;
+                        });
+                        this.splitItems(temp_items);
+                        if (this.urls.unknown_source.length) this.selected_tab = 4;
+                    });
+            }
+        },
+        splitItems(items) {
+            items.forEach(item => {
+                if (item?.source == undefined) {
+                    this.urls.unknown_source.push(item);
+                }
+                else if (item.status == 'Found') {
+                    this.urls.to_projects.push(item);
+                }
+                else {
+                    this.urls.to_system.push(item);
+                }
+            });
+            console.log('urls', this.urls)
         },
         validHttpUrl(string) {
             let url;
@@ -401,7 +384,7 @@ export default {
                 if (url.protocol !== "http:" && url.protocol !== "https:") return {};
                 return url 
             } catch (_) {
-                return {};  
+                return {};
             }
         },
     },
@@ -409,58 +392,41 @@ export default {
         all_urls_obj() {
             return [...new Set([
                 ...this.urls.invalid.map(item => item.link),
-                ...this.urls.valid.map(item => item.link),
+                ...this.urls.to_system.map(item => item.link),
             ])].reduce((d,n) => ({...d,[n]: true}), {})
         },
         all_items_manually_obj() {
             return this.items_manually.map(item => item.link).reduce((d,n) => ({...d,[n]: true}), {})
         },
         selectedUrls() {
-            return this.urls.valid.filter(item => item?.selected)
+            return this.urls.to_projects.filter(item => item?.selected)
         },
-        // show_selected_project_ids() {
-        //     let removeIcon = `<i
-        //         class="
-        //             fa-solid fa-xmark scale-[.7] absolute top-[-8px] right-[-8px]
-        //             transition-all bg-[#ec5e5e] text-white text-[14px] cursor-pointer pt-[2px]
-        //             flex w-[1.35em] h-[1.35em] items-center justify-center rounded-full
-        //         "
-        //         onclick="event.target.parentElement.parentElement.remove()"
-        //     ></i>`;
-        //     return this.selected_project_ids.map(p_id => (
-        //         `<span class="project-tag" contenteditable="false"><span
-        //             class="bg-gray-400 text-white rounded-[5px] px-[5px] inline-flex h-[18px] mb-px items-center relative z-[8]"
-        //         >${p_id}${removeIcon}</span><span class="font-bold text-[18px]">,</span>&nbsp;</span>`
-        //     )).join('');
+        // async initProjects() {
+        //     try {
+        //         let response = await axios.get('/ru/project-search/getallprojects');
+
+        //         return response.data;
+        //     }
+        //     catch (error) {
+        //         console.log(error);
+        //         return [];
+        //     }
         // },
     },
-    mounted() {
-        axios.get('/ru/project-search/getallprojects')
+    created() {
+        this.initProjects();
+
+        this.getItems(0, true)
             .then(response => {
-                this.sorted_project_ids = this.project_ids = response.data;
-                this.update_temp_project_ids();
-
-                // console.log('project-list', document.querySelector('#project-list'));
-
-                // let options = {
-                //     root: document.querySelector('#project-list'),
-                //     rootMargin: "0px",
-                //     threshold: 1.0,
-                // };
-                
-                // const callback = (entries, observer) => {
-                //     console.log(entries);
-                //     console.log(observer);
-                //     if (entries[0].isIntersecting || Object.values(entries[0].intersectionRect).every(n => n == 0)) {
-                //         this.get_more_temp_project_ids();
-                //     }
-                // }
-        
-                // let observer = new IntersectionObserver(callback, options);
-                // console.log('observer', observer);
-                // observer.observe(this.$refs.observer)
+                console.log('response', response);
             })
-            .catch(error => console.log(error))
+            .catch(error => console.log(error));
+
+        this.getItems()
+            .then(response => {
+                console.log('response', response);
+            })
+            .catch(error => console.log(error));
     }
 }
 </script>
@@ -491,10 +457,6 @@ div {
 .project-tag:not(:hover) .fa-xmark {
     opacity: .5;
     transform: scale(.5) !important;
-}
-
-.projects:has( > .tags) {
-    padding-top: 0 !important;
 }
 
 .projects:not(:empty):not(:has( > .tags)) {
@@ -529,6 +491,7 @@ div {
     cursor: pointer;
     padding: 7px;
     border-radius: 4px;
+    margin-bottom: 3px;
 }
 .project-id-name:hover {
     background: #0000001a;

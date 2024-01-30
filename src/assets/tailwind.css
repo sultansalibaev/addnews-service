@@ -200,13 +200,13 @@ pre {
 }
 
 
-.chatgpt-textbox-scrollbar[placeholder]:empty::before {
+.chatgpt-textbox-scrollbar[contenteditable][placeholder]:empty::before {
     content: attr(placeholder);
     color: #7d7e90;
     font-weight: 400;
 }
 
-.chatgpt-textbox-scrollbar[placeholder]:not(.chatgpt-textbox-scrollbar[placeholder]:empty)::before {
+.chatgpt-textbox-scrollbar[contenteditable][placeholder]:not(.chatgpt-textbox-scrollbar[contenteditable][placeholder]:empty)::before {
     content: "";
 }
 
@@ -223,3 +223,20 @@ pre {
 }
 
 
+
+
+
+.fa-spinner {
+    animation: lds-ellipsis1 1s infinite linear;
+    height: 1em;
+}
+
+@keyframes lds-ellipsis1 {
+    0% {
+        transform: rotateZ(0deg);
+    }
+
+    100% {
+        transform: rotateZ(360deg);
+    }
+}
