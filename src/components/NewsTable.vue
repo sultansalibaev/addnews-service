@@ -10,7 +10,7 @@
                         <th v-if="columns.link" class="!text-left head-url">URL</th>
                         <th v-if="columns.source" class="min-w-[123.19px]">Источник</th>
                         <th v-if="columns.published_at" class="min-w-[174.57px]">Дата публикаций</th>
-                        <th v-if="columns.published_at" class="min-w-[174.57px]">Дата добавление</th>
+                        <th v-if="columns.created_at" class="min-w-[174.57px]">Дата добавление</th>
                         <th v-if="columns.project_id" class="min-w-[110.17px]">ID-проекта</th>
                         <th v-if="columns.status">Статус</th>
                     </tr>
@@ -75,6 +75,7 @@
                             <span class="text_gray" v-else>Отсутствует</span>
                         </td>
                         <td v-if="columns.published_at">{{ item?.published_at ?? '- -' }}</td>
+                        <td v-if="columns.created_at">{{ item?.created_at ?? '- -' }}</td>
                         <td
                             v-if="columns.project_id"
                             :title="item?.projects?.map(p => `${p.id} - ${p.name}`)?.join('\n')"
@@ -168,6 +169,7 @@ export default {
             link: true,
             source: true,
             published_at: true,
+            created_at: true,
             project_id: true,
             status: true
         };

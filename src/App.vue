@@ -354,6 +354,9 @@ export default {
                             if (item.published_at) {
                                 item.published_at = new Date(item.published_at).format("Y-m-d h:i:s");
                             }
+                            if (item.created_at) {
+                                item.created_at = new Date(item.created_at).format("Y-m-d h:i:s");
+                            }
 
                             return item;
                         });
