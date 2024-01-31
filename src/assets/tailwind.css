@@ -82,7 +82,7 @@ pre {
 #app .tab-content {
     box-shadow: 0 0 7px rgba(0,0,0,.1);
     border-radius: 7px;
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 
 #app li.active .nav-link {

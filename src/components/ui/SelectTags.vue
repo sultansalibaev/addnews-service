@@ -68,7 +68,7 @@
                     :key="project.id"
                     class="project-id-name"
                     :class="{
-                        'bg-[#0000001a]': project.selected
+                        'bg-[#0000001a]': getSelectedTagBy[project?.id]
                     }"
                     :title="`${project.id} - ${project.name}`"
                     @click.stop="toggleTag(project)"
@@ -86,6 +86,7 @@ import {
     searched_tags,
     sliced_tags,
     selected_tags,
+    getSelectedTagBy,
 
     getMoreTags,
     searchTags,
@@ -106,6 +107,7 @@ export default {
         searched_tags,
         sliced_tags,
         selected_tags,
+        getSelectedTagBy,
 
         getMoreTags,
         searchTags,

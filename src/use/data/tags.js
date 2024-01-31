@@ -14,6 +14,16 @@ export const hasPreviouslySelectedTags = computed(() => {
     return selected_tags.value.every(tag => previously_selected_tag_ids[tag?.id]);
 });
 
+export const getSelectedTagBy = computed(() => (
+    selected_tags.value.reduce(
+        (obj, tag) => ({
+            ...obj,
+            [tag?.id]: true
+        }),
+        {}
+    )
+));
+
 export function sliceTags() {
     sliced_tags.value = searched_tags.value.slice(0, 50);
     tags_loading.value = false;

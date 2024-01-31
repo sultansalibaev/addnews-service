@@ -84,14 +84,14 @@
                         >Добавить в систему</button>
                     </div>
                 </div>
-                <div role="tabpanel" id="tab-2" class="tab-pane"  :class="{ active: selected_tab == 2 }">
+                <div role="tabpanel" id="tab-2" class="tab-pane" :class="{ active: selected_tab == 2 }">
                     <NewsTable :items="own_requests" :setColumns="{ source: false, project_id: false }" />
                 </div>
-                <div role="tabpanel" id="tab-3" class="tab-pane"  :class="{ active: selected_tab == 3 }" v-if="items_manually.length">
+                <div role="tabpanel" id="tab-3" class="tab-pane" :class="{ active: selected_tab == 3 }" v-if="items_manually.length">
                     <NewsTable class="invalid-table" @remove-item="removeManuallyItem" :items="items_manually" :only="['link', 'project_id']" />
                 </div>
-                <div role="tabpanel" id="tab-4" class="tab-pane"  :class="{ active: selected_tab == 4 }" v-if="urls.unknown_source.length">
-                    <h3 class="!text-[20px] mt-[18px] px-[15px] mx-[5px]">Добавление/проверка источника публикаций:</h3>
+                <div role="tabpanel" id="tab-4" class="tab-pane pt-[18px]" :class="{ active: selected_tab == 4 }" v-if="urls.unknown_source.length">
+                    <h3 class="!text-[20px] px-[15px] mx-[5px]">Добавление/проверка источника публикаций:</h3>
                     <NewsTable
                         @select-item="selectItem"
                         @remove-item="removeItem"
@@ -101,8 +101,8 @@
                         :selectable="true"
                     />
                 </div>
-                <div role="tabpanel" id="tab-5" class="tab-pane"  :class="{ active: selected_tab == 5 }" v-if="urls.to_projects.length">
-                    <div class="flex justify-between items-center mt-[18px] px-[15px] mx-[5px] h-[33.63px]">
+                <div role="tabpanel" id="tab-5" class="tab-pane pt-[18px]" :class="{ active: selected_tab == 5 }" v-if="urls.to_projects.length">
+                    <div class="flex justify-between items-center px-[15px] mx-[5px] h-[33.63px]">
                         <h3 class="!text-[20px]">Добавление в проект:</h3>
                         <div
                             v-if="selectedUrls.length"
@@ -120,7 +120,7 @@
                                 @click="applyProjects()"
                             >Применить</button>
                         </div>
-                        <span v-else-if="urls.to_projects.every(item => !(item?.projects?.length))" class="text-[#f2b90a]">(выберите публикацию)</span>
+                        <small v-else-if="urls.to_projects.every(item => !(item?.projects?.length))" class="text-[#f2b90a]">(выберите публикацию)</small>
                     </div>
                     <NewsTable
                         @select-item="selectItem"
@@ -141,7 +141,7 @@
                         >Добавить</button>
                     </div>
                 </div>
-                <div role="tabpanel" id="tab-6" class="tab-pane"  :class="{ active: selected_tab == 6 }" v-if="urls.invalid.length">
+                <div role="tabpanel" id="tab-6" class="tab-pane" :class="{ active: selected_tab == 6 }" v-if="urls.invalid.length">
                     <NewsTable class="invalid-table" :withoutThead="true" :copy_link="true" :items="urls.invalid" :only="['link']" />
                 </div>
             </div>
