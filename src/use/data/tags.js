@@ -1,10 +1,18 @@
-import { reactive, ref } from "vue";
+import { reactive, ref, computed } from "vue";
 
 export const tags_loading = reactive(ref(false));
 export const tags = reactive(ref([]));
 export const searched_tags = reactive(ref([]));
 export const sliced_tags = reactive(ref([]));
 export const selected_tags = reactive(ref([]));
+export const previously_selected_tags = reactive(ref([]));
+
+export const hasPreviouslySelectedTags = computed(() => {
+    const previously_selected_tag_ids = previously_selected_tags.value
+        .reduce((obj, tag) => ({...obj, [tag?.id]: true}), {});
+
+    return selected_tags.value.every(tag => previously_selected_tag_ids[tag?.id]);
+});
 
 export function sliceTags() {
     sliced_tags.value = searched_tags.value.slice(0, 50);
@@ -80,8 +88,23 @@ export function addTag(project) {
     if (!selected_tags.value.includes(project)) selected_tags.value.push(project);
 }
 
+export function addPreviouslySelectedTags(projects) { // tagify
+    previously_selected_tags.value = [];
+
+    projects.forEach(project => {
+        project.selected = true;
+
+        if (!selected_tags.value.includes(project)) selected_tags.value.push(project);
+
+        if (!previously_selected_tags.value.includes(project)) previously_selected_tags.value.push(project);
+    });
+}
+
 export function clearSelectedTags() {
     selected_tags.value = selected_tags.value.filter(project => {
+        return (project.selected = false);
+    })
+    previously_selected_tags.value = previously_selected_tags.value.filter(project => {
         return (project.selected = false);
     })
 }

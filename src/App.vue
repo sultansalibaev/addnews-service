@@ -3,6 +3,7 @@
         <div class="input-group h-full mb-[15px] flex items-end">
             <div class="relative w-full h-[33.63px] z-10 rounded-tl-[4px] rounded-bl-[4px]" id="chatgpt-prompt-textarea">
                 <ResizableField
+                    v-focus
                     ref="urlsInput"
                     :contenteditable="'plaintext-only'"
                     :placeholder="'Введите ссылку на публикацию'"
@@ -62,7 +63,7 @@
                         :items="urls.to_system"
                         :tab-name="'to_system'"
                         :selectable="true"
-                        :set-columns="{ published_at: false, published_at: false }"
+                        :set-columns="{ published_at: false, published_at: false, project_id: false }"
                     />
                     <div class="flex items-center gap-x-[12px] px-[15px] mx-[5px]">
                         <button
@@ -84,24 +85,25 @@
                     </div>
                 </div>
                 <div role="tabpanel" id="tab-2" class="tab-pane"  :class="{ active: selected_tab == 2 }">
-                    <NewsTable :items="own_requests" :setColumns="{ source: false }" />
+                    <NewsTable :items="own_requests" :setColumns="{ source: false, project_id: false }" />
                 </div>
                 <div role="tabpanel" id="tab-3" class="tab-pane"  :class="{ active: selected_tab == 3 }" v-if="items_manually.length">
                     <NewsTable class="invalid-table" @remove-item="removeManuallyItem" :items="items_manually" :only="['link', 'project_id']" />
                 </div>
                 <div role="tabpanel" id="tab-4" class="tab-pane"  :class="{ active: selected_tab == 4 }" v-if="urls.unknown_source.length">
+                    <h3 class="!text-[20px] mt-[18px] px-[15px] mx-[5px]">Добавление/проверка источника публикаций:</h3>
                     <NewsTable
                         @select-item="selectItem"
                         @remove-item="removeItem"
                         :items="urls.unknown_source"
                         :tab-name="'unknown_source'"
-                        :set-columns="{ project_id: false, status: false }"
+                        :only="['category_id', 'link', 'source']"
                         :selectable="true"
                     />
                 </div>
                 <div role="tabpanel" id="tab-5" class="tab-pane"  :class="{ active: selected_tab == 5 }" v-if="urls.to_projects.length">
                     <div class="flex justify-between items-center mt-[18px] px-[15px] mx-[5px] h-[33.63px]">
-                        <h3 class="!text-[20px]">Добавление новых публикации:</h3>
+                        <h3 class="!text-[20px]">Добавление в проект:</h3>
                         <div
                             v-if="selectedUrls.length"
                             class="flex flex-grow-[1] items-center justify-end gap-[12px]"
@@ -118,6 +120,7 @@
                                 @click="applyProjects()"
                             >Применить</button>
                         </div>
+                        <span v-else-if="urls.to_projects.every(item => !(item?.projects?.length))" class="text-[#f2b90a]">(выберите публикацию)</span>
                     </div>
                     <NewsTable
                         @select-item="selectItem"
@@ -131,9 +134,10 @@
                         <button
                             type="button"
                             :class="{
-                                '!bg-gray-300 !border-gray-300 pointer-events-none': !selectedUrls.length,
+                                '!bg-gray-300 !border-gray-300 pointer-events-none': selectedUrls.length == 0 || !selectedUrls.every(item => Boolean(item?.projects?.length)),
                             }"
                             class="btn btn-primary ml-auto"
+                            @click="handlerAddToProjects"
                         >Добавить</button>
                     </div>
                 </div>
@@ -153,7 +157,7 @@ import { getInfoItems, getItems, addToProjects } from './use/api';
 
 import SelectTags from "@/components/ui/SelectTags.vue"
 import { initProjects } from "@/use/api/projects"
-import { clearSelectedTags, selected_tags } from "@/use/data/tags"
+import { clearSelectedTags, selected_tags, addPreviouslySelectedTags, hasPreviouslySelectedTags } from "@/use/data/tags"
 
 export default {
     name: 'App',
@@ -171,6 +175,8 @@ export default {
 
         clearSelectedTags,
         selected_tags,
+        addPreviouslySelectedTags,
+        hasPreviouslySelectedTags,
     }),
     data() {
         function randomInt(min, max) {
@@ -232,10 +238,10 @@ export default {
     },
     methods: {
         handlerAddToProjects() {
-            this.addToProjects(this.urls.to_projects)
-                .then(response => {
-                    console.log('handlerAddToProjects', response);
-                })
+            this.addToProjects(this.selectedUrls)
+                // .then(response => {
+                //     console.log('handlerAddToProjects', response);
+                // })
         },
         cancelProjects() {
             // this.input_project = '';
@@ -402,7 +408,22 @@ export default {
             return this.items_manually.map(item => item.link).reduce((d,n) => ({...d,[n]: true}), {})
         },
         selectedUrls() {
-            return this.urls.to_projects.filter(item => item?.selected)
+            const selectedUrls = this.urls.to_projects.filter(item => item?.selected);
+            const selected_project_ids = selectedUrls?.[0]?.projects?.reduce((d,p) => ({...d, [p?.id]: true}), {}) ?? {};
+            const hasEqualProjectIds = selectedUrls
+                .every(item => (
+                    Boolean(item?.projects?.length) &&
+                    item?.projects?.every(project => selected_project_ids?.[project?.id])
+                ));
+            if (selectedUrls.length < 1) return selectedUrls;
+            if (hasEqualProjectIds) {
+                this.addPreviouslySelectedTags(selectedUrls[0].projects)
+            }
+            else if (this.hasPreviouslySelectedTags) {
+                this.clearSelectedTags();
+            }
+                
+            return selectedUrls;
         },
         // async initProjects() {
         //     try {
@@ -416,6 +437,26 @@ export default {
         //     }
         // },
     },
+    // watch: {
+    //     'urls.to_projects': {
+    //         handler(new_items) {
+    //             const selectedUrls = new_items.filter(item => item?.selected);
+    //             const selected_project_ids = selectedUrls?.[0]?.projects?.map(project => project?.id) ?? [];
+    //             const hasEqualProjectIds = selectedUrls
+    //                 .every(item => (
+    //                     Boolean(item?.projects?.length) &&
+    //                     item?.projects?.every(project => {
+    //                         selected_project_ids?.includes(project?.id)
+    //                     })
+    //                 ))
+
+    //             if (selectedUrls.length >= 1 && hasEqualProjectIds) {
+    //                 this.addPreviouslySelectedTags(selectedUrls[0].projects)
+    //             }
+    //         },
+    //         deep: true
+    //     }
+    // },
     created() {
         this.initProjects();
 

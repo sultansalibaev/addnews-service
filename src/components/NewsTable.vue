@@ -49,6 +49,9 @@
                             <!-- text-[#4e94d0] text-[#529ddd] -->
                             <a
                                 class="truncate transition-all hover:underline hover:text-[#337ab7]"
+                                :class="{
+                                    '!text-white': item?.selected
+                                }"
                                 target="_blank"
                                 :href="item?.link"
                                 :title="item?.link"

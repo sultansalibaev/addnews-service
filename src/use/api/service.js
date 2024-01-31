@@ -45,5 +45,7 @@ export const addToProjects = (items) => {
         )
     });
 
+    console.log('addToProjects', data);
+
     // return service.post(`/project_item?user_id=${user_id}`, data)
 }
