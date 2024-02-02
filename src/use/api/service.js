@@ -36,13 +36,11 @@ export const addToProjects = (items) => {
 
         if (item.selected && item.projects.length == 0) return;
 
-        data.push(...item.projects
-            .map(p_id => ({
-                item_id: item.item.id,
-                project_id: p_id,
-                type: item.item.type,
-            }))
-        )
+        data.push({
+            item_id: item.item.id,
+            project_id: item.projects.map(project => project?.id),
+            type: item.item.type,
+        });
     });
 
     console.log('addToProjects', data);

@@ -104,7 +104,7 @@ export function addPreviouslySelectedTags(projects) { // tagify
     projects.forEach(project => {
         project.selected = true;
 
-        if (!selected_tags.value.includes(project)) selected_tags.value.push(project);
+        if (!selected_tags.value.includes(project) && selected_tags.value != undefined) selected_tags.value.push(project);
 
         if (!previously_selected_tags.value.includes(project)) previously_selected_tags.value.push(project);
     });

@@ -283,6 +283,28 @@ export default {
             }
 
             if (!event.shiftKey) this.lastSelectedIndex = index;
+
+            this.updateSelectedProjectTags();
+        },
+        updateSelectedProjectTags() {
+            
+            const selected_project_ids = this.selectedUrls?.[0]?.projects?.reduce((d,p) => ({...d, [p?.id]: true}), {}) ?? {};
+            const hasEqualProjectIds = this.selectedUrls
+                .every(item => (
+                    Boolean(item?.projects?.length) &&
+                    item?.projects?.every(project => selected_project_ids?.[project?.id])
+                ));
+            if (this.selectedUrls.length < 1) {
+                this.selected_tags = undefined;
+                return;
+            }
+            this.selected_tags = [];
+            if (hasEqualProjectIds) {
+                this.addPreviouslySelectedTags(this.selectedUrls[0].projects)
+            }
+            else if (this.hasPreviouslySelectedTags) {
+                this.clearSelectedTags();
+            }
         },
         removeItem(itemIndex, tab_name) {
             if (itemIndex > -1) this.urls?.[tab_name].splice(itemIndex, 1)
@@ -408,22 +430,7 @@ export default {
             return this.items_manually.map(item => item.link).reduce((d,n) => ({...d,[n]: true}), {})
         },
         selectedUrls() {
-            const selectedUrls = this.urls.to_projects.filter(item => item?.selected);
-            const selected_project_ids = selectedUrls?.[0]?.projects?.reduce((d,p) => ({...d, [p?.id]: true}), {}) ?? {};
-            const hasEqualProjectIds = selectedUrls
-                .every(item => (
-                    Boolean(item?.projects?.length) &&
-                    item?.projects?.every(project => selected_project_ids?.[project?.id])
-                ));
-            if (selectedUrls.length < 1) return selectedUrls;
-            if (hasEqualProjectIds) {
-                this.addPreviouslySelectedTags(selectedUrls[0].projects)
-            }
-            else if (this.hasPreviouslySelectedTags) {
-                this.clearSelectedTags();
-            }
-                
-            return selectedUrls;
+            return this.urls.to_projects.filter(item => item?.selected);
         },
         // async initProjects() {
         //     try {
